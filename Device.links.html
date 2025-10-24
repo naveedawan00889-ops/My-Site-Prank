@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>System Alert</title>
+<style>
+  :root{--bg:#050505;--accent1:#ff4d4d;--accent2:#ffb3b3;--muted:#cfcfcf}
+  html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111}
+  /* Overlay */
+  #hacked {
+    position:fixed; inset:0; background:var(--bg); color:var(--accent1);
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    z-index:9999; text-align:center; padding:20px;
+  }
+  h1{font-size:56px; margin:0 0 6px; letter-spacing:6px; color:var(--accent1)}
+  p#sub{margin:6px 0 18px; font-size:18px; color:var(--muted)}
+  .bar{width:80%; max-width:760px; background:#222; height:16px; border-radius:10px; overflow:hidden;}
+  .fill{height:100%; width:0%; background:linear-gradient(90deg,var(--accent1),var(--accent2)); transition:width .9s linear;}
+  @keyframes flicker {0%{opacity:1}50%{opacity:.94}100%{opacity:1}}
+  #hacked h1{animation:flicker 1s infinite;}
+  /* Normal content (after prank) */
+  #site {display:none;padding:32px;text-align:center;}
+  /* Warning modal (when back pressed) */
+  #warnModal {
+    position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+    background:#fff; color:#111; padding:18px 20px; border-radius:10px; box-shadow:0
