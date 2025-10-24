@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Important</title>
+<style>
+  :root{--bg:#050505;--accent1:#ff4d4d;--accent2:#ffb3b3;--muted:#cfcfcf}
+  html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111}
+  /* Overlay */
+  #hacked {
+    position:fixed; inset:0; background:var(--bg); color:var(--accent1);
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    z-index:9999; text-align:center; padding:20px;
+  }
+  h1{font-size:56px; margin:0 0 6px; letter-spacing:6px; color:var(--accent1)}
+  p#sub{margin:6px 0 18px; font-size:18px; color:var(--muted)}
+  .bar{width:80%; max-width:760px; background:#222; height:16px; border-radius:10px; overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,.6);}
+  .fill{height:100%; width:0%; background:linear-gradient(90deg,var(--accent1),var(--accent2)); transition:width .9s linear;}
+  .small{color:var(--muted); margin-top:12px; font-size:13px;}
+  @keyframes flicker {0%{opacity:1}50%{opacity:.94}100%{opacity:1}}
+  #hacked h1{animation:flicker 1s infinite;}
+  /* Normal content (after prank) */
+  #site {display:none;padding:32px;text-align:center;}
+  /* Warning modal (when back pressed) */
+  #warnModal {
+    position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+    background:#fff; color:#111; padding:18px 20px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.45);
+    z-index:10010; max-width:92%; width:420px; display:none;
+  }
+  #warnModal h3{margin:0 0 8px}
+  #warnModal p{margin:0 0 14px; color:#333}
+  .row{display:flex; gap:10px; justify-content:center}
+  .btn {padding:10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:700}
+  .btn-stay{background:#111;color:#fff}
+  .btn-leave{background:var(--accent1); color:#fff}
+  /* small hint for escape (invisible mostly) */
+  #esc-hint { position: fixed; right:8px; top:8px; font-size:11px; color:#777; opacity:0.6; z-index:10011 }
+</style>
+</head>
+<body>
+
+<div id="esc-hint" aria-hidden="true">Press ESC to exit</div>
+
+<!-- HACKED overlay -->
+<div id="hacked" role="dialog" aria-live="assertive" aria-label="Hacked message">
+  <h1>HACKED</h1>
+  <p id="sub">Suspicious activity detected. Securing system...</p>
+  <div class="bar" aria-hidden="true"><div class="fill" id="fill"></div></div>
+  <div class="small">This is a harmless prank. Nothing is harmed. (Press ESC to exit)</div>
+</div>
+
+<!-- Warning modal shown when user attempts to navigate back -->
+<div id="warnModal" role="alertdialog" aria-hidden="true">
+  <h3>Wait — prank still running</h3>
+  <p>The prank is scheduled for 5 minutes. Do you want to leave now or stay?</p>
+  <div class="row">
+    <button class="btn btn-stay" id="stayBtn">Stay (Keep watching)</button>
+    <button class="btn btn-leave" id="leaveBtn">Leave (Exit)</button>
+  </div>
+</div>
+
+<!-- Normal site content -->
+<div id="site">
+  <h2>Welcome back</h2>
+  <p>The prank has ended — everything is fine. Have fun and be kind to your friends 🙂</p>
+</div>
+
+<script>
+(function(){
+  const DURATION = 300; // 5 minutes in seconds
+  const fill = document.getElementById('fill');
+  const hacked = document.getElementById('hacked');
+  const site = document.getElementById('site');
+  const sub = document.getElementById('sub');
+  const warnModal = document.getElementById('warnModal');
+  const stayBtn = document.getElementById('stayBtn');
+  const leaveBtn = document.getElementById('leaveBtn');
+
+  let elapsed = 0;
+  const total = DURATION;
+  let timer = null;
+  let allowExit = false; // when true we let user leave without prompt
+
+  // Run progress timer
+  function startTimer(){
+    timer = setInterval(() => {
+      elapsed++;
+      const pct = Math.min(100, Math.round((elapsed/total)*100));
+      fill.style.width = pct + '%';
+
+      if(elapsed === 10) sub.textContent = "Alerting security team...";
+      if(elapsed === 60) sub.textContent = "Analyzing system state...";
+      if(elapsed === 180) sub.textContent = "Finalizing checks...";
+      if(elapsed === 240) sub.textContent = "Almost done...";
+
+      if(elapsed >= total) finish();
+    }, 1000);
+  }
+
+  function finish(){
+    clearInterval(timer);
+    hacked.style.display = 'none';
+    site.style.display = 'block';
+    fill.style.width = '0%';
+    // friendly reveal
+    setTimeout(() => {
+      site.querySelector('h2').textContent = "Just kidding — all good!";
+    }, 600);
+    allowExit = true;
+    // clean up history hooks
+    window.removeEventListener('popstate', onPopState);
+    window.removeEventListener('beforeunload', onBeforeUnload);
+  }
+
+  // Start timer
+  startTimer();
+
+  // Create history entries so Back triggers popstate
+  // push current state twice so that first back triggers popstate we control
+  try {
+    history.pushState({prank:'1'}, '', '#prank');
+    history.pushState({prank:'2'}, '', '#prank2');
+  } catch(e){ /* ignore if not allowed */ }
+
+  // Show warning modal when back pressed (popstate)
+  function onPopState(e){
+    if(allowExit) return; // if prank ended, don't intercept
+    // show modal and re-push state to keep user here unless they choose to leave
+    warnModal.style.display = 'block';
+    warnModal.setAttribute('aria-hidden','false');
+    // push state again so back remains on this page
+    try { history.pushState({prank:'stay'}, '', '#stay'); } catch(e){}
+  }
+
+  window.addEventListener('popstate', onPopState);
+
+  // beforeunload to show confirm if user tries to close/refresh - modern browsers show generic dialog
+  function onBeforeUnload(e){
+    if(allowExit) return;
+    e.preventDefault();
+    // Chrome requires returnValue to be set
+    e.returnValue = '';
+    return '';
+  }
+  window.addEventListener('beforeunload', onBeforeUnload);
+
+  // Buttons in modal
+  stayBtn.addEventListener('click', () => {
+    warnModal.style.display = 'none';
+    warnModal.setAttribute('aria-hidden','true');
+  });
+
+  leaveBtn.addEventListener('click', () => {
+    // allow exit and go back
+    allowExit = true;
+    warnModal.style.display = 'none';
+    warnModal.setAttribute('aria-hidden','true');
+    // Remove handlers before navigating
+    window.removeEventListener('popstate', onPopState);
+    window.removeEventListener('beforeunload', onBeforeUnload);
+    // go back in history one step (user wants to leave)
+    try { history.back(); } catch(e) { /* fallback close */ }
+  });
+
+  // ESC quick exit (user-friendly)
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' || e.key === 'Esc'){
+      finish();
+    }
+  });
+
+  // mobile-friendly double-tap on hint to exit
+  const escHint = document.getElementById('esc-hint');
+  let cornerTaps = 0;
+  escHint.addEventListener('click', () => {
+    cornerTaps++;
+    if(cornerTaps >= 2){ finish(); }
+    setTimeout(()=> cornerTaps = 0, 1600);
+  });
+
+  // Safety: ensure modal close on orientation change/resizes
+  window.addEventListener('resize', () => {
+    if(allowExit) warnModal.style.display = 'none';
+  });
+
+})();
+</script>
+
+</body>
+</html>
